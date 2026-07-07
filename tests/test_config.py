@@ -54,6 +54,11 @@ class ConfigEnvironmentTests(unittest.TestCase):
         self.assertIn("GLADOS_VERBOSE", joined_logs)
         self.assertIn("maybe", joined_logs)
 
+    def test_default_domains_only_include_glados_cloud(self):
+        checkin = self.import_checkin()
+
+        self.assertEqual(checkin.Config.DOMAINS, ["glados.cloud"])
+
 
 if __name__ == "__main__":
     unittest.main()
