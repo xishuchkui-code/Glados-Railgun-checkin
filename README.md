@@ -6,11 +6,15 @@
 
 #### 我的邀请码：([0A58E-NV28S-6U3QV-33VMG](https://0a58e-nv28s-6u3qv-33vmg.glados.space)) 
 
-### **Fork**本仓库
+### Fork 并 Star 本仓库
 
-![图片加载失败](imgs/1.png)
+1. 点击页面右上角的 **Fork**，把本仓库复制到自己的 GitHub 账号下。
+2. 进入 Fork 后的仓库，点击 **Star**，避免仓库长期无活动导致 Actions 停用。
+3. 后续所有 Secret 和 Actions 配置都在你 Fork 后的仓库中完成。
 
-### 添加**secret**
+![Fork 和 Star 示例](imgs/github-buttons.png)
+
+### 添加 Secret
 
 1. 跳转至自己的仓库的`Settings`->`Secrets and variables`->`Action`
 
@@ -41,9 +45,6 @@
 
 > 不配置时默认为 `plan500`，即积分达到 500 时自动兑换 100 天
 
-### **star**自己的仓库
-
-![图片加载失败](imgs/4.png)
 
 ## 文件结构
 
