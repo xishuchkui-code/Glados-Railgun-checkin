@@ -1,6 +1,7 @@
 import requests
 import os
 import logging
+import sys
 from enum import Enum
 from typing import Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass, asdict
@@ -414,6 +415,8 @@ class Checker:
                     if self.config.verbose:
                         result_message = f"结果: {result.status}, 获得 {result.points} 积分, 剩余 {result.days}, 总 {result.points_total}, {result.exchange}"
                     self._log(cookie_idx, domain, LogEmoji.SUCCESS, result_message, force=True)
+                elif result.code == CheckinStatus.REPEAT:
+                    self._log(cookie_idx, domain, LogEmoji.REPEAT, result_message, force=True)
                 else:
                     self._log(cookie_idx, domain, LogEmoji.WARNING, result_message, force=True)
 
@@ -469,7 +472,8 @@ class Checker:
         send_content_lines = []
         log_content_lines = []
         for i, res in enumerate(results, 1):
-            line = f"#{i} P:{res['points']} 剩余:{res['days']} 总积分:{res['points_total']} | {res['status']} | {res['exchange']}"
+            points_part = f" | 本次积分:{res['points']}" if res["code"] == CheckinStatus.SUCCESS else ""
+            line = f"#{i} {res['status']}{points_part} | 剩余:{res['days']} | 总积分:{res['points_total']} | {res['exchange']}"
             send_content_lines.append(line)
 
             if self.config.verbose:
@@ -482,6 +486,12 @@ class Checker:
         log_content = "\n".join(log_content_lines)
         return title, content, log_content
 
+    def get_exit_code(self) -> int:
+        """获取程序退出码：至少一个成功或重复签到则视为有效运行。"""
+        results = self.get_results()
+        has_valid_result = any(r["code"] in (CheckinStatus.SUCCESS, CheckinStatus.REPEAT) for r in results)
+        return 0 if has_valid_result else 1
+
 
 # 初始化日志
 logger = init_logger()
@@ -489,6 +499,7 @@ logger = init_logger()
 
 def main():
     """主函数"""
+    exit_code = 1
     try:
         # 1. 加载配置
         logger.info(f"{LogEmoji.START} 步骤 1: 加载配置")
@@ -507,13 +518,15 @@ def main():
             logger.info(f"{LogEmoji.START} 步骤 3: 格式化结果")
             title, content, log_content = checker.format_results()
             logger.info(f"\n{LogEmoji.END}========== 签到总结 ==========\n{title}\n{log_content}")
+            exit_code = checker.get_exit_code()
 
     except Exception as e:
         logger.error(f"{LogEmoji.ERROR} 主程序执行过程中发生未预期的错误: {e}")
         title, content, log_content = "# 脚本执行出错", str(e), str(e)
 
     logger.info(f"{LogEmoji.END} 签到完成")
+    return exit_code
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

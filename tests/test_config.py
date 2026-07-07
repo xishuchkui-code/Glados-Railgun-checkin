@@ -60,5 +60,69 @@ class ConfigEnvironmentTests(unittest.TestCase):
         self.assertEqual(checkin.Config.DOMAINS, ["glados.cloud"])
 
 
+class FakeConfig:
+    verbose = False
+    DOMAINS = ["glados.cloud"]
+    cookies_list = ["koa:sess=fake; koa:sess.sig=fake;"]
+
+
+class ResultFormattingTests(unittest.TestCase):
+    def test_repeat_result_uses_repeat_emoji_instead_of_warning(self):
+        checkin = importlib.import_module("checkin")
+        checker = checkin.Checker(FakeConfig())
+        repeat_result = checkin.CheckinResult(
+            cookie_index=1,
+            domain="glados.cloud",
+            status="重复签到",
+            code=checkin.CheckinStatus.REPEAT,
+        )
+
+        with patch.object(checker, "_checkin_on_domain", return_value=repeat_result), self.assertLogs(checkin.logger, level="INFO") as logs:
+            checker.checkin_all()
+
+        joined_logs = "\n".join(logs.output)
+        self.assertIn("🔄 结果: 重复签到", joined_logs)
+        self.assertNotIn("⚠️  结果: 重复签到", joined_logs)
+
+    def test_verbose_summary_uses_readable_fields_without_p_zero_prefix(self):
+        checkin = importlib.import_module("checkin")
+        config = FakeConfig()
+        config.verbose = True
+        checker = checkin.Checker(config)
+        checker.results = [
+            checkin.CheckinResult(
+                cookie_index=1,
+                domain="glados.cloud",
+                status="重复签到",
+                points="0",
+                days="371 天",
+                points_total="26 积分",
+                exchange="积分不足，未兑换",
+                code=checkin.CheckinStatus.REPEAT,
+            )
+        ]
+
+        _title, content, log_content = checker.format_results()
+
+        expected = "#1 重复签到 | 剩余:371 天 | 总积分:26 积分 | 积分不足，未兑换"
+        self.assertEqual(content, expected)
+        self.assertEqual(log_content, expected)
+        self.assertNotIn("P:0", content)
+
+    def test_exit_code_is_failure_only_when_all_results_failed(self):
+        checkin = importlib.import_module("checkin")
+        checker = checkin.Checker(FakeConfig())
+
+        checker.results = [
+            checkin.CheckinResult(1, "glados.cloud", status="签到失败", code=checkin.CheckinStatus.FAILURE)
+        ]
+        self.assertEqual(checker.get_exit_code(), 1)
+
+        checker.results = [
+            checkin.CheckinResult(1, "glados.cloud", status="重复签到", code=checkin.CheckinStatus.REPEAT)
+        ]
+        self.assertEqual(checker.get_exit_code(), 0)
+
+
 if __name__ == "__main__":
     unittest.main()
