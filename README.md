@@ -14,21 +14,20 @@
 
 1. 跳转至自己的仓库的`Settings`->`Secrets and variables`->`Action`
 
-2. 添加1个`repository secret`，命名为`GLADOS_COOKIES`，其值对应GLaDOS账号的cookie值中的有效部分（获取方式如下）
+2. 添加1个`repository secret`，命名为`GLADOS_COOKIES`，其值对应 GLaDOS 账号 Cookie 中的 `koa:sess` 和 `koa:sess.sig`。
 
-- 在GLaDOS的签到页面按`F12`
+推荐使用浏览器扩展 **Cookie-Editor** 获取：
 
-- 切换到`Network`页面下，刷新
+- 登录 [GLaDOS](https://glados.cloud) 后，点击浏览器扩展栏里的 **Cookie-Editor**。
+- 确认列表中存在 `koa:sess` 和 `koa:sess.sig` 两项。
+- 点击 Cookie-Editor 底部的导出按钮，复制导出的 Cookie 文本。
+- 将其中的 `koa:sess=...; koa:sess.sig=...;` 配置到 GitHub Secret `GLADOS_COOKIES`。
 
-![图片加载失败](imgs/2.png)
+![Cookie-Editor 获取 Cookie](imgs/cookie-editor.png)
 
-- 点击第一个选项卡后在`Request Headers`下找到`Cookie`，右键复制cookie的值即可
+> 参考格式：`koa:sess=eyJ1c2xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxAwMH0=; koa:sess.sig=xJkOxxxxxxxxxxxxxxxtnM;`
 
-  > 参考格式：koa:sess=eyJ1c2xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxAwMH0=; koa:sess.sig=xJkOxxxxxxxxxxxxxxxtnM;
-
-![图片加载失败](imgs/3.png)
-
-- 多账号请在 `COOKIES` 中 添加多个 `cookies` 中间使用 `&`连接即可。（例如： `c1&c3&c3...`）
+- 多账号请在 `GLADOS_COOKIES` 中添加多个 Cookie，中间使用 `&` 连接。（例如：`cookie1&cookie2&cookie3`）
 
 3. 配置积分兑换策略（非必须）
 
@@ -63,9 +62,14 @@
 
 
 ## 问题排查与定位
-- 大家可以通过查询 actions 中的 running checkin 日志快速定位问题，有其他问题提交issue。
 
-  <img width="1684" height="844" alt="image" src="https://github.com/user-attachments/assets/45348a5f-43e4-45f5-8fdf-ce84d343b30d" />
+大家可以通过查询 Actions 中的 `Running checkin` 日志快速定位问题。
+
+正常运行时，日志会显示加载 Cookie、执行签到、查询剩余天数、查询总积分和签到总结：
+
+![Actions 日志示例](imgs/actions-log-example.png)
+
+如果日志中出现 Cookie 无效、未授权或请求失败，请重新使用 Cookie-Editor 获取并更新 `GLADOS_COOKIES`。
 
 ## 声明
 
