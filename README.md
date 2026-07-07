@@ -42,10 +42,6 @@
 
 > 不配置时默认为 `plan500`，即积分达到 500 时自动兑换 100 天
 
-4. 手机推送（非必须）
-
-- 添加1个`repository secret`，命名为`PUSHDEER_SENDKEY`，其值对应 PushDeer key: ([获取地址](https://www.pushdeer.com/product.html))。
-
 ### **star**自己的仓库
 
 ![图片加载失败](imgs/4.png)

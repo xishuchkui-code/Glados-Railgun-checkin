@@ -1,11 +1,9 @@
 import requests
-import json
 import os
 import logging
 from enum import Enum
 from typing import Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass, asdict
-from pypushdeer import PushDeer
 from logging_config import init_logger
 
 
@@ -94,7 +92,6 @@ def log_method(func):
 class Config:
     """应用配置"""
 
-    ENV_PUSH_KEY = "PUSHDEER_SENDKEY"
     ENV_COOKIES = "GLADOS_COOKIES"
     ENV_EXCHANGE_PLAN = "GLADOS_EXCHANGE_PLAN"
     ENV_VERBOSE = "GLADOS_VERBOSE"
@@ -116,7 +113,6 @@ class Config:
     }
 
     def __init__(self):
-        self.push_key: str = ""
         self.cookies_list: List[str] = []
         self.exchange_plan: str = self.DEFAULT_EXCHANGE_PLAN
         self.verbose: bool = self.DEFAULT_VERBOSE
@@ -124,16 +120,9 @@ class Config:
 
     def _load_config(self) -> None:
         """加载配置"""
-        push_key_env: Optional[str] = os.environ.get(self.ENV_PUSH_KEY)
         raw_cookies_env: Optional[str] = os.environ.get(self.ENV_COOKIES)
-        exchange_plan_env: Optional[str] = os.environ.get(self.ENV_EXCHANGE_PLAN)
-        verbose_env: Optional[str] = os.environ.get(self.ENV_VERBOSE)
-
-        if not push_key_env:
-            logger.warning(f"{LogEmoji.WARNING} 环境变量 '{self.ENV_PUSH_KEY}' 未设置。")
-            self.push_key = ""
-        else:
-            self.push_key = push_key_env
+        exchange_plan_env = (os.environ.get(self.ENV_EXCHANGE_PLAN) or "").strip()
+        verbose_env = (os.environ.get(self.ENV_VERBOSE) or "").strip()
 
         if not raw_cookies_env:
             logger.warning(f"{LogEmoji.WARNING} 环境变量 '{self.ENV_COOKIES}' 未设置。")
@@ -144,7 +133,6 @@ class Config:
                 raise ValueError(f"环境变量 '{self.ENV_COOKIES}' 已设置，但未包含任何有效的 Cookie。")
 
         if not exchange_plan_env:
-            logger.warning(f"{LogEmoji.WARNING} 环境变量 '{self.ENV_EXCHANGE_PLAN}' 未设置，将使用默认兑换计划 {self.DEFAULT_EXCHANGE_PLAN}。")
             self.exchange_plan = self.DEFAULT_EXCHANGE_PLAN
         else:
             if exchange_plan_env in self.EXCHANGE_PLANS:
@@ -155,10 +143,9 @@ class Config:
                 self.exchange_plan = self.DEFAULT_EXCHANGE_PLAN
 
         logger.info(f"{LogEmoji.INFO} 共加载了 {len(self.cookies_list)} 个 Cookie 用于签到。")
-        logger.info(f"{LogEmoji.INFO} 当前 {self.ENV_PUSH_KEY} {'已设置' if push_key_env else '未设置'}。")
         logger.info(f"{LogEmoji.INFO} 当前 {self.ENV_EXCHANGE_PLAN}: {self.exchange_plan}。")
 
-        if verbose_env is not None:
+        if verbose_env:
             verbose_env_lower = verbose_env.lower()
             if verbose_env_lower in ["true", "1", "yes", "y"]:
                 self.verbose = True
@@ -238,7 +225,7 @@ class API:
 
         try:
             if method.upper() == "POST":
-                response = self.session.post(url, headers=session_headers, data=json.dumps(data), timeout=(60, 120))
+                response = self.session.post(url, headers=session_headers, json=data, timeout=(60, 120))
             elif method.upper() == "GET":
                 response = self.session.get(url, headers=session_headers, timeout=(60, 120))
             else:
@@ -390,28 +377,6 @@ class CheckinResult:
         return result_dict
 
 
-class PushService:
-    """推送服务"""
-
-    def __init__(self, config: Config):
-        self.config = config
-
-    def send(self, title: str, content: str) -> bool:
-        """发送推送"""
-        if not self.config.push_key:
-            logger.info(f"{LogEmoji.WARNING} 未设置推送密钥，跳过推送通知。")
-            return False
-
-        try:
-            pushdeer = PushDeer(pushkey=self.config.push_key)
-            pushdeer.send_text(title, desp=content)
-            logger.info(f"{LogEmoji.SUCCESS} 推送通知发送成功。")
-            return True
-        except Exception as e:
-            logger.error(f"{LogEmoji.ERROR} 发送推送通知失败: {e}")
-            return False
-
-
 class Checker:
     """签到"""
 
@@ -474,13 +439,16 @@ class Checker:
 
             # 4. 执行兑换
             required_points = self.config.EXCHANGE_PLANS.get(self.config.exchange_plan, 500)
-            self._log(
-                cookie_idx,
-                domain,
-                LogEmoji.EXCHANGE,
-                f"开始兑换 {self.config.exchange_plan} (需要 {required_points} 积分)",
-            )
-            result.exchange = api.exchange(cookie, self.config.exchange_plan, required_points)
+            if points_num >= required_points:
+                self._log(
+                    cookie_idx,
+                    domain,
+                    LogEmoji.EXCHANGE,
+                    f"开始兑换 {self.config.exchange_plan} (需要 {required_points} 积分)",
+                )
+                result.exchange = api.exchange(cookie, self.config.exchange_plan, required_points)
+            else:
+                result.exchange = "积分不足，未兑换"
 
         return result
 
@@ -544,10 +512,6 @@ def main():
         logger.error(f"{LogEmoji.ERROR} 主程序执行过程中发生未预期的错误: {e}")
         title, content, log_content = "# 脚本执行出错", str(e), str(e)
 
-    # 4. 发送推送
-    logger.info(f"{LogEmoji.START} 步骤 4: 发送推送")
-    push_service = PushService(config if "config" in locals() else "")
-    push_service.send(title, content)
     logger.info(f"{LogEmoji.END} 签到完成")
 
 
