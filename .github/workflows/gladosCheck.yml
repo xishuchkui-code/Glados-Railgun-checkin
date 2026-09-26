@@ -44,6 +44,7 @@ jobs:
 
     # 执行 签到脚本
     - name: Running checkin
+      continue-on-error: true
       run: |
         python checkin.py
       env:
