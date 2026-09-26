@@ -18,6 +18,11 @@ class ProjectFileTests(unittest.TestCase):
 
             self.assertNotIn("railgun", content)
 
+    def test_workflow_allows_checkin_step_to_fail_without_failing_job(self):
+        workflow = (REPO_ROOT / ".github" / "workflows" / "gladosCheck.yml").read_text(encoding="utf-8")
+        self.assertIn("- name: Running checkin", workflow)
+        self.assertIn("continue-on-error: true", workflow)
+
 
 if __name__ == "__main__":
     unittest.main()
